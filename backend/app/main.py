@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import FRONTEND_ORIGIN
 from app.schemas import (
     ClaimExtractionRequest,
-    ClaimExtractionResponse
+    ClaimExtractionResponse,
 )
 
 from app.database import (
@@ -16,13 +16,14 @@ from app.database import (
     get_all_verifications,
     get_verification_by_id,
     delete_verification,
-    clear_verification_history
+    clear_verification_history,
 )
 
 from app.services.bifrost_service import ask_bifrost
 from app.services.claim_service import extract_claims
 from app.services.tavily_service import search_web
 from app.services.verification_service import verify_answer
+from app.services.source_intelligence_service import analyze_sources
 
 
 # ------------------------------------------
@@ -44,7 +45,7 @@ app = FastAPI(
     title="VeriSync AI API",
     description="AI-powered answer freshness verification system",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -64,8 +65,87 @@ app.add_middleware(
     allow_origins=list(set(allowed_origins)),
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
+
+
+# ------------------------------------------
+# SOURCE INTELLIGENCE INTEGRATION
+# ------------------------------------------
+
+def attach_source_intelligence(result: dict) -> dict:
+    """
+    Adds Source Intelligence analysis to every verified claim.
+
+    Existing verification verdicts and freshness results
+    are preserved without modification.
+    """
+
+    verified_claims = result.get("verified_claims", [])
+
+    if not isinstance(verified_claims, list):
+        return result
+
+    analyzed_count = 0
+    claims_with_sources = 0
+
+    for index, claim_result in enumerate(verified_claims, start=1):
+
+        if not isinstance(claim_result, dict):
+            continue
+
+        claim_text = claim_result.get("claim", "")
+        sources = claim_result.get("sources", [])
+
+        if isinstance(sources, list) and sources:
+            claims_with_sources += 1
+
+        try:
+            intelligence = analyze_sources(
+                claim=claim_text,
+                sources=sources,
+            )
+
+            claim_result["source_intelligence"] = intelligence
+
+            if intelligence.get("analysis_status") == "completed":
+                analyzed_count += 1
+
+        except Exception as error:
+            print(
+                f"Source Intelligence error for claim {index}: {error}"
+            )
+
+            claim_result["source_intelligence"] = {
+                "analysis_status": "unavailable",
+                "claim": claim_text,
+                "sources": [],
+                "cross_source_summary": {
+                    "total_sources": 0,
+                    "supporting_sources": 0,
+                    "contradicting_sources": 0,
+                    "mixed_sources": 0,
+                    "mentioning_sources": 0,
+                    "insufficient_evidence_sources": 0,
+                    "distinct_domains": 0,
+                    "supporting_domains": 0,
+                    "contradicting_domains": 0,
+                    "agreement_status": "inconclusive",
+                    "cross_domain_support": False,
+                },
+                "summary": (
+                    "Source Intelligence could not be completed. "
+                    "The original verification results are preserved."
+                ),
+            }
+
+    result["source_intelligence_summary"] = {
+        "total_claims": len(verified_claims),
+        "claims_with_sources": claims_with_sources,
+        "claims_analyzed": analyzed_count,
+    }
+
+    return result
 
 
 # ------------------------------------------
@@ -77,7 +157,7 @@ def home():
     return {
         "message": "Welcome to VeriSync AI",
         "status": "running",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 
@@ -89,7 +169,7 @@ def home():
 def health():
     return {
         "status": "healthy",
-        "application": "VeriSync AI"
+        "application": "VeriSync AI",
     }
 
 
@@ -108,14 +188,15 @@ def test_ai():
             "success": True,
             "provider": "Bifrost",
             "model": "gemini-2.5-flash",
-            "response": result
+            "response": result,
         }
 
     except Exception as error:
         print(f"AI connection error: {error}")
+
         raise HTTPException(
             status_code=502,
-            detail="AI provider connection failed. Check backend logs."
+            detail="AI provider connection failed. Check backend logs.",
         )
 
 
@@ -128,7 +209,7 @@ def test_search(
     query: str = Query(
         default="Python 3.12 release date",
         min_length=3,
-        max_length=400
+        max_length=400,
     )
 ):
     try:
@@ -138,14 +219,15 @@ def test_search(
             "success": True,
             "provider": "Tavily",
             "total_results": len(result["results"]),
-            "data": result
+            "data": result,
         }
 
     except Exception as error:
         print(f"Tavily search error: {error}")
+
         raise HTTPException(
             status_code=502,
-            detail="Tavily search failed. Check backend logs."
+            detail="Tavily search failed. Check backend logs.",
         )
 
 
@@ -155,7 +237,7 @@ def test_search(
 
 @app.post(
     "/api/extract-claims",
-    response_model=ClaimExtractionResponse
+    response_model=ClaimExtractionResponse,
 )
 def extract_answer_claims(request: ClaimExtractionRequest):
     try:
@@ -163,37 +245,44 @@ def extract_answer_claims(request: ClaimExtractionRequest):
 
     except Exception as error:
         print(f"Claim extraction error: {error}")
+
         raise HTTPException(
             status_code=502,
-            detail="Claim extraction failed. Check backend logs."
+            detail="Claim extraction failed. Check backend logs.",
         )
 
 
 # ------------------------------------------
-# VERIFY ANSWER AND SAVE TO SQLITE
+# VERIFY ANSWER + SOURCE INTELLIGENCE
 # ------------------------------------------
 
 @app.post("/api/verify")
 def verify_generated_answer(request: ClaimExtractionRequest):
     try:
+        # Step 1: Run existing VeriSync verification.
         result = verify_answer(request.answer)
 
+        # Step 2: Enrich verified claims with Source Intelligence.
+        result = attach_source_intelligence(result)
+
+        # Step 3: Save the complete enriched result to SQLite.
         saved_record = save_verification(
             answer=request.answer,
-            result=result
+            result=result,
         )
 
         return {
             **result,
             "history_id": saved_record["id"],
-            "created_at": saved_record["created_at"]
+            "created_at": saved_record["created_at"],
         }
 
     except Exception as error:
         print(f"Verification error: {error}")
+
         raise HTTPException(
             status_code=502,
-            detail="Verification failed. Check backend logs."
+            detail="Verification failed. Check backend logs.",
         )
 
 
@@ -204,25 +293,26 @@ def verify_generated_answer(request: ClaimExtractionRequest):
 @app.get("/api/history")
 def get_history(
     limit: int = Query(default=50, ge=1, le=100),
-    offset: int = Query(default=0, ge=0)
+    offset: int = Query(default=0, ge=0),
 ):
     try:
         records = get_all_verifications(
             limit=limit,
-            offset=offset
+            offset=offset,
         )
 
         return {
             "success": True,
             "total": len(records),
-            "history": records
+            "history": records,
         }
 
     except Exception as error:
         print(f"History retrieval error: {error}")
+
         raise HTTPException(
             status_code=500,
-            detail="Could not load verification history."
+            detail="Could not load verification history.",
         )
 
 
@@ -238,12 +328,12 @@ def get_history_item(record_id: int):
         if record is None:
             raise HTTPException(
                 status_code=404,
-                detail="Verification record not found."
+                detail="Verification record not found.",
             )
 
         return {
             "success": True,
-            "record": record
+            "record": record,
         }
 
     except HTTPException:
@@ -251,9 +341,10 @@ def get_history_item(record_id: int):
 
     except Exception as error:
         print(f"Record retrieval error: {error}")
+
         raise HTTPException(
             status_code=500,
-            detail="Could not retrieve verification record."
+            detail="Could not retrieve verification record.",
         )
 
 
@@ -269,12 +360,12 @@ def delete_history_item(record_id: int):
         if not deleted:
             raise HTTPException(
                 status_code=404,
-                detail="Verification record not found."
+                detail="Verification record not found.",
             )
 
         return {
             "success": True,
-            "message": "Verification deleted successfully."
+            "message": "Verification deleted successfully.",
         }
 
     except HTTPException:
@@ -282,9 +373,10 @@ def delete_history_item(record_id: int):
 
     except Exception as error:
         print(f"Delete error: {error}")
+
         raise HTTPException(
             status_code=500,
-            detail="Could not delete verification."
+            detail="Could not delete verification.",
         )
 
 
@@ -299,14 +391,15 @@ def clear_history():
 
         return {
             "success": True,
-            "message": "Verification history cleared successfully."
+            "message": "Verification history cleared successfully.",
         }
 
     except Exception as error:
         print(f"Clear history error: {error}")
+
         raise HTTPException(
             status_code=500,
-            detail="Could not clear verification history."
+            detail="Could not clear verification history.",
         )
 
 

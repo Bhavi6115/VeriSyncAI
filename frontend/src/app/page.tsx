@@ -34,13 +34,14 @@ import {
   Zap,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import SourceIntelligence, { type SourceIntelligenceData } from "../components/SourceIntelligence";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const STORAGE_KEY = "verisync-verification-history";
 
 type Verdict = "supported" | "contradicted" | "mixed" | "insufficient_evidence" | string;
  type Freshness = "current" | "potentially_outdated" | "outdated" | "not_time_sensitive" | "uncertain" | string;
- type Section = "overview" | "studio" | "results" | "history" | "about";
+ type Section = "overview" | "studio" | "results" | "source-intelligence" | "history" | "about";
  type Filter = "all" | "supported" | "contradicted" | "outdated";
  type SortOrder = "newest" | "oldest" | "trust";
  type BackendStatus = "checking" | "online" | "offline";
@@ -60,6 +61,7 @@ type Claim = {
   freshness: Freshness;
   explanation?: string;
   sources?: Source[];
+  source_intelligence?: SourceIntelligenceData;
   search_error?: string | null;
 };
 
@@ -367,6 +369,7 @@ export default function Home() {
   const [answer, setAnswer] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
   const [activeReport, setActiveReport] = useState<Report | null>(null);
+  const [sourceReportId, setSourceReportId] = useState("");
   const [expandedClaims, setExpandedClaims] = useState<number[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isReverifying, setIsReverifying] = useState(false);
@@ -431,6 +434,7 @@ export default function Home() {
   }, [checkBackend]);
 
   const latestReport = reports[0] ?? null;
+  const sourceIntelligenceReport = reports.find((report) => report.id === sourceReportId) ?? latestReport;
   const latestScores = latestReport
     ? getReportScores(latestReport.verified_claims)
     : getReportScores([]);
@@ -553,6 +557,7 @@ export default function Home() {
       const report = makeReport(data, trimmed);
       report.verification_type = "initial";
       setReports((previous) => [report, ...previous]);
+      setSourceReportId(report.id);
       setActiveReport(null);
       setActiveSection("studio");
       showToast("Verification complete. Your claim details are shown below.");
@@ -604,6 +609,7 @@ export default function Home() {
       refreshedReport.comparison_base_id = report.id;
 
       setReports((previous) => [refreshedReport, ...previous]);
+      setSourceReportId(refreshedReport.id);
       setActiveReport(refreshedReport);
       setAnswer(report.answer);
       setExpandedClaims([]);
@@ -1051,6 +1057,7 @@ export default function Home() {
     { id: "overview", label: "Overview", icon: Layers3 },
     { id: "studio", label: "Verification studio", icon: Sparkles },
     { id: "results", label: "Latest report", icon: FileCheck2 },
+    { id: "source-intelligence", label: "Source Intelligence", icon: ShieldCheck },
     { id: "history", label: "History", icon: History },
     { id: "about", label: "How it works", icon: Network },
   ];
@@ -1339,6 +1346,22 @@ export default function Home() {
                     <h3>Reports you can revisit</h3>
                     <p>Keep a local research trail, reopen earlier checks, inspect evidence and export a structured verification report.</p>
                   </article>
+                  <article className="capability-card">
+                    <div className="capability-icon capability-violet"><ShieldCheck size={19} /></div>
+                    <span>05 / SOURCE INTELLIGENCE</span>
+                    <h3>Understand your sources</h3>
+                    <p>Go beyond source links. Evaluate authority, relevance, publication dates, evidence stance and agreement across sources.</p>
+                  </article>
+                </div>
+                <div className="panel" style={{ marginTop: "22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "18px", flexWrap: "wrap" }}>
+                  <div>
+                    <div className="eyebrow">A CLOSER LOOK AT THE EVIDENCE</div>
+                    <strong style={{ display: "block", marginTop: "6px" }}>Explore Source Intelligence</strong>
+                    <p style={{ margin: "5px 0 0", maxWidth: "680px" }}>Inspect the quality and context behind retrieved evidence in its own dedicated workspace.</p>
+                  </div>
+                  <button className="secondary-button compact-button" onClick={() => navigate("source-intelligence")}>
+                    Open Source Intelligence <ArrowUpRight size={14} />
+                  </button>
                 </div>
               </section>
 
@@ -1562,6 +1585,105 @@ export default function Home() {
               )}
 
               <div className="studio-history-hint"><History size={14} /> Your completed reports are saved in <button onClick={() => navigate("history")}>History</button>. The latest claim details are also shown here in the Studio.</div>
+            </section>
+          )}
+
+          {activeSection === "source-intelligence" && (
+            <section className="workspace-section" id="source-intelligence">
+              <div className="section-heading">
+                <div>
+                  <div className="eyebrow"><span className="eyebrow-line" /> SOURCE QUALITY &amp; CROSS-CHECKING</div>
+                  <h2>Source <span>intelligence.</span></h2>
+                  <p>Explore the quality, context and consistency of the evidence behind each verified claim.</p>
+                </div>
+                <button className="primary-button compact-button" onClick={() => navigate("studio")}>
+                  <Sparkles size={14} /> Verify an answer <ArrowUpRight size={14} />
+                </button>
+              </div>
+
+              {reports.length > 0 && (
+                <div className="panel" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", marginBottom: "22px" }}>
+                  <div>
+                    <div className="eyebrow">SELECT A VERIFICATION</div>
+                    <strong style={{ display: "block", marginTop: "5px" }}>Choose which report to inspect</strong>
+                    <p style={{ margin: "4px 0 0" }}>Source assessments are stored with each verification report.</p>
+                  </div>
+                  <select
+                    className="sort-select"
+                    value={sourceIntelligenceReport?.id ?? ""}
+                    onChange={(event) => setSourceReportId(event.target.value)}
+                    aria-label="Choose a verification report for Source Intelligence"
+                  >
+                    {reports.map((report) => (
+                      <option key={report.id} value={report.id}>
+                        {formatDate(report.created_at)} · {report.total_claims} claims · {report.answer.slice(0, 55)}{report.answer.length > 55 ? "…" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {!sourceIntelligenceReport ? (
+                <div className="history-empty">
+                  <div className="empty-icon"><ShieldCheck size={22} /></div>
+                  <strong>No source intelligence yet</strong>
+                  <p>Run a verification first. VeriSync will assess the sources retrieved for each factual claim.</p>
+                  <button className="primary-button compact-button" onClick={() => navigate("studio")}>
+                    <Sparkles size={14} /> Open verification studio
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="report-meta">
+                    <div><span className="report-meta-label">REPORT SELECTED</span><strong>{formatDate(sourceIntelligenceReport.created_at)}</strong></div>
+                    <div><span className="report-meta-label">CLAIMS ANALYSED</span><strong>{sourceIntelligenceReport.total_claims}</strong></div>
+                    <div><span className="report-meta-label">SOURCE ASSESSMENTS</span><strong>{sourceIntelligenceReport.verified_claims.filter((claim) => Boolean(claim.source_intelligence)).length}</strong></div>
+                  </div>
+
+                  <div className="original-answer panel">
+                    <div className="panel-heading">
+                      <div><div className="eyebrow">ANALYSED ANSWER</div><h2>Original answer</h2></div>
+                      <button className="icon-button" title="Copy original answer" onClick={() => void copyText(sourceIntelligenceReport.answer)}><Copy size={15} /></button>
+                    </div>
+                    <p>{sourceIntelligenceReport.answer}</p>
+                  </div>
+
+                  <div className="claims-header">
+                    <div><strong>Source assessments by claim</strong><span>{sourceIntelligenceReport.verified_claims.length} CLAIMS · SOURCE QUALITY REVIEW</span></div>
+                    <div className="evidence-label"><ShieldCheck size={13} /> SOURCE INTELLIGENCE</div>
+                  </div>
+
+                  {sourceIntelligenceReport.verified_claims.length ? (
+                    <div className="claims-list">
+                      {sourceIntelligenceReport.verified_claims.map((claim, index) => (
+                        <article className="claim-card claim-expanded" key={`${sourceIntelligenceReport.id}-source-intel-${index}`}>
+                          <div className="claim-details">
+                            <div className="claim-topline">
+                              <span className="claim-category">{claim.category || "GENERAL"}</span>
+                              <span className={`freshness-tag ${claim.freshness}`}>{freshnessLabel(claim.freshness)}</span>
+                              <span className={`verdict verdict-${claim.verdict}`}><i />{verdictLabel(claim.verdict)}</span>
+                            </div>
+                            <div className="claim-explanation">
+                              <strong>{String(index + 1).padStart(2, "0")} · {claim.claim}</strong>
+                              <p>{claim.explanation || "No claim explanation was provided."}</p>
+                            </div>
+                            {claim.source_intelligence ? (
+                              <SourceIntelligence data={claim.source_intelligence} />
+                            ) : (
+                              <div className="source-warning source-intelligence-unavailable">
+                                <CircleAlert size={13} /> This report does not contain a Source Intelligence assessment for this claim. Run Re-verify &amp; compare to generate a fresh source assessment.
+                              </div>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="history-empty"><div className="empty-icon"><FileSearch size={22} /></div><strong>No factual claims were extracted</strong><p>There are no source assessments to display for this report.</p></div>
+                  )}
+                  <div className="report-disclaimer"><CircleAlert size={15} /> Source authority and evidence assessments are AI-assisted signals. Review original sources and their context before relying on important claims.</div>
+                </>
+              )}
             </section>
           )}
 
