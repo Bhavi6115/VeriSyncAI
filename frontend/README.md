@@ -1,51 +1,47 @@
 # VeriSync AI — Frontend
 
-A modern, interactive web interface for verifying AI-generated answers, analyzing factual claims, tracking information freshness, and comparing verification results over time.
+The frontend of VeriSync AI is an interactive verification dashboard built using Next.js, React.js and TypeScript.
 
-## Overview
-
-VeriSync AI helps users evaluate the reliability of AI-generated responses by breaking answers into individual factual claims and presenting their verification results with supporting web evidence.
-
-The frontend provides an intuitive dashboard where users can submit answers, inspect claim-level results, explore evidence sources, maintain verification history, and re-verify previous answers.
+It provides users with a centralized workspace to submit AI-generated answers, inspect claim-level verification results, explore source intelligence, and compare historical verification reports.
 
 ## Features
 
-- **AI Answer Verification:** Submit AI-generated answers for factual analysis.
-- **Claim Extraction:** Automatically identify individual factual claims.
-- **Claim-Level Results:** View supported, contradicted, mixed, and insufficient-evidence verdicts.
-- **Evidence & Sources:** Explore supporting information retrieved from the web.
-- **Freshness Classification:** Identify potentially outdated and time-sensitive information.
-- **Verification Studio:** Analyze verification results through an interactive interface.
-- **Verification History:** Access previously completed verification reports.
-- **Re-Verify & Compare:** Run verification again and compare previous and latest results, including verdict changes, newly detected claims, scores, and updated evidence.
-- **Responsive Design:** Optimized for desktop and mobile screens.
+- **Overview Dashboard:** Introduction to VeriSync AI and its verification capabilities.
+- **Verification Studio:** Submit AI-generated answers for claim extraction and verification.
+- **Claim-Level Results:** View individual claims, verdicts, explanations and supporting evidence.
+- **Source Intelligence Workspace:** Explore detailed source authority, relevance, evidence stance, publication dates, limitations and cross-source agreement.
+- **Verification History:** Revisit previously analyzed responses.
+- **Re-Verify & Compare:** Compare previous verification results with newly generated results.
+- **Responsive Interface:** Designed for desktop and mobile screens.
 
-## Tech Stack
+## Technology Stack
 
-| Technology | Purpose |
-|---|---|
-| Next.js | Frontend framework |
-| React.js | UI development |
-| TypeScript | Type safety |
-| Tailwind CSS | Styling |
-| Lucide React | Icons |
-| Local Storage | Verification history persistence |
-| FastAPI | Backend communication |
+- Next.js
+- React.js
+- TypeScript
+- Tailwind CSS
+- CSS
+- REST API integration
 
 ## Project Structure
 
 ```text
 frontend/
-├── public/
+│
 ├── src/
-│   └── app/
-│       ├── page.tsx
-│       ├── layout.tsx
-│       └── globals.css
+│   ├── app/
+│   │   ├── page.tsx
+│   │   ├── layout.tsx
+│   │   └── globals.css
+│   │
+│   └── components/
+│       ├── SourceCard.tsx
+│       ├── EvidenceAgreement.tsx
+│       ├── SourceIntelligence.tsx
+│       └── SourceIntelligence.css
+│
+├── public/
 ├── package.json
-├── package-lock.json
-├── next.config.ts
-├── tsconfig.json
 └── README.md
 ```
 
@@ -53,90 +49,69 @@ frontend/
 
 ### Prerequisites
 
-Make sure you have installed:
-
-- Node.js (LTS recommended)
+- Node.js
 - npm
-- Git
+- A running VeriSync AI backend
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/VeriSync-AI.git
-```
-
-### 2. Navigate to the Frontend
+### 1. Navigate to the Frontend
 
 ```bash
-cd VeriSync-AI/frontend
+cd frontend
 ```
 
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 4. Configure Environment Variables
-
-Create a `.env.local` file in the frontend directory.
-
-Configure the backend URL according to your local setup:
-
-```env
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-```
-
-Do not add private API keys to frontend environment variables.
-
-### 5. Start the Development Server
+### 3. Start the Development Server
 
 ```bash
 npm run dev
 ```
 
-Open your browser at:
+Open:
 
-http://localhost:3000
+`http://localhost:3000`
 
-## Backend Integration
+### 4. Build for Production
 
-The frontend communicates with the VeriSync AI FastAPI backend for:
+```bash
+npm run build
+```
 
-- Claim extraction
-- Live evidence retrieval
-- AI-powered claim evaluation
-- Freshness classification
-- Re-verification
+To start the production server after building:
 
-Ensure the backend is running before submitting verification requests.
+```bash
+npm run start
+```
 
-## Available Scripts
+## Backend Connection
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start development server |
-| `npm run build` | Build production application |
-| `npm run start` | Start production server |
-| `npm run lint` | Run lint checks, if configured |
+The frontend communicates with the FastAPI backend through REST API requests.
 
-## Re-Verify & Compare
+Default local backend:
 
-One of VeriSync AI's key capabilities is its re-verification workflow.
+`http://127.0.0.1:8000`
 
-Users can re-evaluate a previously submitted answer and inspect differences between verification runs, including:
+Make sure the backend is running and the API endpoint configuration used by the frontend points to the correct backend address.
 
-- Changes in verification scores.
-- Claims whose verdicts have changed.
-- Newly detected factual claims.
-- Updated supporting evidence and sources.
+## Main User Workflow
 
-This helps users understand how the reliability of AI-generated information evolves over time.
+1. Open the VeriSync AI dashboard.
+2. Navigate to Verification Studio.
+3. Paste an AI-generated answer.
+4. Start verification.
+5. Explore claim-level results and evidence.
+6. Open the Source Intelligence workspace for detailed source assessments.
+7. Access previous reports through History.
+8. Re-verify and compare results when needed.
 
-## Part of VeriSync AI
+## Related Repository
 
-This frontend is part of the larger VeriSync AI project, which combines a Next.js frontend with a Python FastAPI backend, Bifrost-powered Gemini integration, and Tavily web search.
+[VeriSync AI — Main Repository](https://github.com/Bhavi6115/VeriSyncAI)
 
 ---
 
-**VeriSync AI — Verify Facts. Track Freshness. Build Trust.**
+**VeriSync AI Frontend — An intuitive interface for intelligent information verification.**
