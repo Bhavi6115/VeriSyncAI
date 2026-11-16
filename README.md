@@ -1,176 +1,191 @@
 # VeriSync AI
+### Intelligent Stale-Answer Detection & Real-Time Claim Verification
 
-### Verify Facts. Track Freshness. Build Trust.
+VeriSync AI is an AI-powered verification platform designed to detect outdated, inaccurate, or potentially misleading information in AI-generated responses.
 
-**VeriSync AI** is an AI-powered answer verification and freshness monitoring platform designed to evaluate the reliability of AI-generated responses.
+It extracts factual claims, searches for supporting evidence from live web sources, evaluates claim accuracy and freshness, and provides detailed source intelligence to help users understand whether information can still be trusted.
 
-It transforms AI-generated answers into individual factual claims, verifies them against live web evidence, identifies potentially outdated information, and provides detailed verification reports with supporting sources.
-
-Instead of simply trusting an AI-generated answer, VeriSync helps users understand **what is accurate, what is questionable, and what may have changed over time.**
+Built for the **Global AI Hackathon 2026**, under the theme of AI Agents & Intelligent Systems.
 
 ---
 
 ## Overview
 
-AI-generated responses can contain inaccurate, misleading, or outdated information. VeriSync AI addresses this challenge through an automated, multi-stage verification workflow.
+AI-generated answers can sound convincing even when their information is outdated or inaccurate. VeriSync AI addresses this challenge through an intelligent verification pipeline that evaluates individual factual claims instead of treating an entire response as one statement.
 
-Users can submit an AI-generated answer and receive a detailed analysis of its factual claims, including individual verdicts, explanations, evidence sources, and information freshness.
-
-The platform also allows users to revisit previous verifications and re-verify answers to understand how their reliability changes over time.
+Users can submit an AI-generated answer and receive claim-level verification results, relevant web evidence, freshness assessments, and detailed source evaluations.
 
 ## Key Features
 
-### 1. AI-Powered Claim Extraction
-Automatically breaks down AI-generated responses into individual factual claims using Gemini 2.5 Flash.
+### 1. Intelligent Claim Extraction
+- Extracts individual factual claims from AI-generated responses.
+- Categorizes claims based on their subject.
+- Identifies temporal sensitivity to prioritize information that may become outdated.
 
-### 2. Live Web Evidence Retrieval
-Uses Tavily to retrieve relevant web information and supporting sources for individual claims.
+### 2. Real-Time Evidence Retrieval
+- Uses Tavily for live web search.
+- Retrieves relevant sources and supporting content.
+- Collects publication-date information when available.
 
-### 3. Claim-Level Verification
-Evaluates individual claims and classifies them into:
+### 3. Claim Verification
+Each extracted claim is evaluated and assigned a verdict:
 
-- **Supported** – Evidence supports the claim.
-- **Contradicted** – Evidence contradicts the claim.
-- **Mixed** – Evidence contains conflicting information.
-- **Insufficient Evidence** – Available evidence is not sufficient to reach a conclusion.
+- Supported
+- Contradicted
+- Mixed
+- Insufficient Evidence
 
-### 4. Information Freshness Detection
-Identifies the temporal sensitivity of information and classifies its freshness:
-
+### 4. Freshness Detection
+Evaluates whether information is:
 - Current
 - Potentially Outdated
 - Outdated
 - Not Time-Sensitive
 - Uncertain
 
-### 5. Evidence-Based Explanations
-Provides explanations alongside supporting evidence, source links, relevance scores, and publication dates when available.
+### 5. Source Intelligence
+Provides detailed source-level analysis, including:
+- Source authority and trustworthiness assessment.
+- Source relevance to the verified claim.
+- Supporting or contradicting evidence stance.
+- Publication and update-date information when available.
+- Source limitations.
+- Cross-source agreement and disagreement analysis.
 
 ### 6. Verification History
-Maintains previously completed verification reports so users can revisit their results.
+- Stores previous verification results.
+- Allows users to revisit earlier reports.
+- Maintains access to previously analyzed claims and evidence.
 
 ### 7. Re-Verify & Compare
-Re-evaluates previously submitted answers and compares the latest results with earlier verification reports.
-
-Users can inspect:
-
-- Previous and latest verification scores.
-- Claims whose verdicts have changed.
-- Newly detected factual claims.
-- Updated evidence and sources.
-- Differences between verification runs.
-
-This helps users understand how the reliability of information evolves over time.
+- Re-verifies previously analyzed responses.
+- Compares previous and latest verification results.
+- Highlights verdict changes and newly detected claims.
 
 ---
-
-## How It Works
-
-```text
-       AI-GENERATED ANSWER
-                |
-                v
-        CLAIM EXTRACTION
-        Gemini via Bifrost
-                |
-                v
-        INDIVIDUAL CLAIMS
-                |
-                v
-        LIVE WEB SEARCH
-             Tavily
-                |
-                v
-         WEB EVIDENCE
-                |
-                v
-       EVIDENCE EVALUATION
-        Gemini via Bifrost
-                |
-                v
-      VERDICT + FRESHNESS
-                |
-                v
-       VERIFICATION REPORT
-                |
-                v
-       HISTORY & COMPARISON
-```
 
 ## Technology Stack
 
-| Technology | Purpose |
+| Layer | Technologies |
 |---|---|
-| Next.js | Frontend framework |
-| React.js | User interface |
-| TypeScript | Type-safe frontend development |
-| Tailwind CSS | Styling |
-| Python | Backend development |
-| FastAPI | REST API |
-| Gemini 2.5 Flash | Claim extraction and evidence evaluation |
-| Bifrost by Maxim AI | AI gateway and model integration |
-| Tavily | Live web search and evidence retrieval |
-| Uvicorn | Backend server |
+| Frontend | Next.js, React.js, TypeScript |
+| Styling | CSS, Tailwind CSS |
+| Backend | Python, FastAPI |
+| AI Model | Gemini 2.5 Flash |
+| AI Gateway | Bifrost by Maxim AI |
+| Web Search | Tavily API |
+| Database | SQLite |
+| API Communication | REST APIs |
 
----
+## System Architecture
+
+```text
+       User
+        |
+        v
+  Next.js Frontend
+        |
+        v
+   FastAPI Backend
+        |
+        v
+  Claim Extraction
+        |
+        v
+  Bifrost + Gemini
+        |
+        v
+  Individual Claims
+        |
+        v
+    Tavily Search
+        |
+        v
+   Live Web Evidence
+        |
+        v
+  Claim Verification
+        |
+        v
+  Freshness Analysis
+        |
+        v
+ Source Intelligence
+        |
+        v
+ SQLite Verification History
+        |
+        v
+   Results Dashboard
+```
 
 ## Project Structure
 
 ```text
 VeriSync-AI/
 │
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   └── app/
-│   ├── package.json
-│   └── README.md
-│
 ├── backend/
 │   ├── app/
 │   │   ├── services/
+│   │   │   ├── bifrost_service.py
+│   │   │   ├── tavily_service.py
+│   │   │   ├── claim_service.py
+│   │   │   ├── freshness_service.py
+│   │   │   ├── verification_service.py
+│   │   │   └── source_intelligence_service.py
+│   │   │
 │   │   ├── config.py
-│   │   ├── schemas.py
-│   │   └── main.py
-│   ├── requirements.txt
-│   └── README.md
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   └── schemas.py
+│   │
+│   └── requirements.txt
 │
-├── .gitignore
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx
+│   │   │   ├── layout.tsx
+│   │   │   └── globals.css
+│   │   │
+│   │   └── components/
+│   │       ├── SourceCard.tsx
+│   │       ├── EvidenceAgreement.tsx
+│   │       ├── SourceIntelligence.tsx
+│   │       └── SourceIntelligence.css
+│   │
+│   └── package.json
+│
 └── README.md
 ```
-
----
 
 ## Getting Started
 
 ### Prerequisites
 
-Make sure the following are installed:
-
-- Node.js and npm
 - Python 3.10 or later
-- Git
-- Bifrost with a configured Gemini provider
-- Tavily API key
+- Node.js and npm
+- A Tavily API key
+- A configured Bifrost gateway and Gemini model access
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/VeriSync-AI.git
-cd VeriSync-AI
+git clone https://github.com/Bhavi6115/VeriSyncAI.git
+cd VeriSyncAI
 ```
 
 ### 2. Set Up the Backend
 
 ```bash
 cd backend
-python -m venv .venv
+python -m venv venv
 ```
 
-Activate the environment on Windows:
+Activate the virtual environment on Windows:
 
 ```powershell
-.venv\Scripts\Activate.ps1
+.\venv\Scripts\Activate.ps1
 ```
 
 Install dependencies:
@@ -179,22 +194,9 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Create a `.env` file inside the backend directory:
+Create a `.env` file in the backend directory and configure the required Tavily and Bifrost credentials and settings according to `app/config.py`.
 
-```env
-TAVILY_API_KEY=your_tavily_api_key
-
-BIFROST_BASE_URL=http://localhost:8080
-BIFROST_MODEL=gemini-2.5-flash
-BIFROST_API_KEY=your_bifrost_virtual_key
-
-BACKEND_PORT=8000
-FRONTEND_ORIGIN=http://localhost:3000
-```
-
-Start your Bifrost gateway and ensure Gemini is configured.
-
-Start the FastAPI server:
+### 3. Start the Backend
 
 ```bash
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
@@ -202,13 +204,13 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 Backend:
 
-http://127.0.0.1:8000
+`http://127.0.0.1:8000`
 
 API documentation:
 
-http://127.0.0.1:8000/docs
+`http://127.0.0.1:8000/docs`
 
-### 3. Set Up the Frontend
+### 4. Set Up the Frontend
 
 Open another terminal:
 
@@ -217,13 +219,7 @@ cd frontend
 npm install
 ```
 
-Create `.env.local` inside the frontend directory:
-
-```env
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-```
-
-Start the development server:
+### 5. Start the Frontend
 
 ```bash
 npm run dev
@@ -231,42 +227,32 @@ npm run dev
 
 Frontend:
 
-http://localhost:3000
+`http://localhost:3000`
 
-**Note:** Keep the backend, Bifrost gateway, and frontend running when using the complete application.
+Ensure the frontend is configured to communicate with the running backend.
 
 ---
 
-## Why VeriSync AI?
+## How It Works
 
-Traditional AI interactions often encourage users to accept generated responses without independently examining their factual accuracy.
+1. The user submits an AI-generated response.
+2. The AI extraction service identifies individual factual claims.
+3. Tavily searches the web for relevant evidence.
+4. The verification service evaluates each claim against retrieved evidence.
+5. Freshness analysis identifies potentially outdated information.
+6. Source Intelligence evaluates the credibility, relevance, stance and agreement of retrieved sources.
+7. Results are saved in verification history for future reference and comparison.
 
-VeriSync introduces an additional verification layer between AI-generated information and the people who use it.
+## Important Notes
 
-Its focus is not only on evaluating individual claims, but also on identifying information that may become outdated and allowing users to compare verification results over time.
+- Publication and update dates depend on information available from the retrieved sources.
+- Source authority and evidence assessments are AI-generated evaluations, not guarantees of truth.
+- VeriSync AI supports informed verification and should not be treated as an infallible source of factual certainty.
 
-## Future Enhancements
+## Security
 
-- Source credibility and reliability scoring.
-- Cross-source agreement and disagreement analysis.
-- Historical claim tracking and truth timelines.
-- Downloadable PDF verification reports.
-- Browser extension for direct AI answer verification.
-- Integrations with multiple AI platforms.
-- Developer API for third-party applications.
-- Multilingual verification support.
+Never commit API keys, `.env` files, virtual environments, or other sensitive configuration files.
 
-## Documentation
+## Project
 
-- [Frontend Documentation](frontend/README.md)
-- [Backend Documentation](backend/README.md)
-
-## Project Vision
-
-VeriSync AI aims to make AI-generated information more transparent, traceable, and reliable by bringing factual verification and information freshness analysis into one accessible platform.
-
-
-
-*Verify Facts. Track Freshness. Build Trust.*
-
-</p>
+**VeriSync AI — Making AI-generated information easier to verify, evaluate, and trust.**
