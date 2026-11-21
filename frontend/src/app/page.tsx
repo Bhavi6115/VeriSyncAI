@@ -226,6 +226,63 @@ function makeReport(data: unknown, answer: string): Report {
   };
 }
 
+function mapHistoryRecord(record: unknown): Report | null {
+  const item = record as {
+    id?: string | number;
+    answer?: string;
+    created_at?: string;
+    timestamp?: string;
+    result?: {
+      total_claims?: number;
+      verified_claims?: Claim[];
+    };
+  };
+
+  if (!item || !item.result || !Array.isArray(item.result.verified_claims)) {
+    return null;
+  }
+
+  return {
+    id: String(item.id ?? crypto.randomUUID()),
+    answer: item.answer ?? "",
+    created_at:
+      item.created_at ??
+      item.timestamp ??
+      new Date().toISOString(),
+    total_claims:
+      item.result.total_claims ?? item.result.verified_claims.length,
+    verified_claims: item.result.verified_claims,
+    verification_type: "initial",
+  };
+}
+function sameHistoryRun(a: Report, b: Report): boolean {
+  if (a.id === b.id) return true;
+
+  if (a.answer.trim() !== b.answer.trim()) return false;
+
+  const timeA = new Date(a.created_at).getTime();
+  const timeB = new Date(b.created_at).getTime();
+
+  // Backend and browser timestamps should be close for the same run.
+  if (
+    !Number.isFinite(timeA) ||
+    !Number.isFinite(timeB) ||
+    Math.abs(timeA - timeB) > 60_000
+  ) {
+    return false;
+  }
+
+  const claimKey = (report: Report) =>
+    report.verified_claims
+      .map(
+        (claim) =>
+          `${normalizeClaimText(claim.claim)}|${claim.verdict}|${claim.freshness}`
+      )
+      .sort()
+      .join("||");
+
+  return claimKey(a) === claimKey(b);
+}
 function normalizeClaimText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -385,18 +442,100 @@ export default function Home() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
+  let cancelled = false;
+
+  async function loadHistory() {
+    let localReports: Report[] = [];
+
+    // First, recover every report already saved in the browser.
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
+
       if (saved) {
         const parsed: unknown = JSON.parse(saved);
-        if (Array.isArray(parsed)) setReports(parsed as Report[]);
+
+        if (Array.isArray(parsed)) {
+          localReports = parsed as Report[];
+        }
       }
-    } catch (loadError) {
-      console.error("Could not load verification history:", loadError);
-    } finally {
-      setHydrated(true);
+    } catch (error) {
+      console.error("Could not load local history:", error);
     }
-  }, []);
+
+    try {
+      // Then retrieve reports from SQLite.
+      const response = await fetch(`${API_URL}/api/history`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not fetch backend history.");
+      }
+
+      const payload = (await response.json()) as {
+        history?: unknown[];
+      };
+
+      const backendReports = (
+        Array.isArray(payload.history) ? payload.history : []
+      )
+        .map(mapHistoryRecord)
+        .filter((report): report is Report => report !== null);
+
+      // Merge without overwriting browser-only re-verification metadata.
+      const mergedReports = [...localReports];
+      const matchedLocalIds = new Set<string>();
+
+      for (const backendReport of backendReports) {
+        const matchingIndex = mergedReports.findIndex(
+          (localReport) =>
+            !matchedLocalIds.has(localReport.id) &&
+            sameHistoryRun(localReport, backendReport)
+        );
+
+        if (matchingIndex === -1) {
+          mergedReports.push(backendReport);
+        } else {
+          matchedLocalIds.add(mergedReports[matchingIndex].id);
+
+          // Keep the browser copy, including comparison relationships.
+          mergedReports[matchingIndex] = {
+            ...backendReport,
+            ...mergedReports[matchingIndex],
+          };
+        }
+      }
+
+      mergedReports.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() -
+          new Date(a.created_at).getTime()
+      );
+
+      if (!cancelled) {
+        setReports(mergedReports);
+      }
+    } catch (error) {
+      console.error("Backend history loading failed:", error);
+
+      // Never discard the browser history if the backend is unavailable.
+      if (!cancelled) {
+        setReports(localReports);
+      }
+    } finally {
+      if (!cancelled) {
+        setHydrated(true);
+      }
+    }
+  }
+
+  void loadHistory();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+ 
 
   useEffect(() => {
     if (!hydrated) return;
